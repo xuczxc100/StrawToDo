@@ -14,7 +14,6 @@ apps/web/dist/
 apps/api/dist/
 apps/mcp/dist/
 packages/shared/dist/
-docs/openapi.json
 data/
 *.sqlite
 .turbo/
