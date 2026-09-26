@@ -1,0 +1,65 @@
+:root {
+  --bg: #0f1218;
+  --elev: #171b24;
+  --line: #2a3140;
+  --text: #e8ecf4;
+  --muted: #9aa3b5;
+  --accent: #5b8def;
+  --ok: #3ecf8e;
+  --danger: #e26d6d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Noto Sans TC", system-ui, sans-serif;
+  background: radial-gradient(900px 400px at 0% 0%, #1a2740, transparent), var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.app { max-width: 920px; margin: 0 auto; padding: 24px; }
+.top {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 20px;
+}
+.brand { font-weight: 700; font-size: 1.25rem; color: var(--text); }
+.tag {
+  font-size: 12px; color: var(--ok); border: 1px solid var(--line);
+  padding: 2px 8px; border-radius: 999px;
+}
+.key-box { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.key-box label { color: var(--muted); font-size: 0.85rem; }
+input, select, button {
+  background: var(--elev); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; font: inherit;
+}
+button {
+  background: var(--accent); border-color: transparent; color: #fff; cursor: pointer; font-weight: 600;
+}
+.panel { background: var(--elev); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.gap { gap: 8px; }
+h1 { margin: 0 0 12px; font-size: 1.35rem; }
+h2 { font-size: 1rem; margin: 20px 0 8px; }
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.create { display: flex; gap: 8px; margin: 12px 0 18px; }
+.create input { flex: 1; }
+.issue-list { list-style: none; padding: 0; margin: 0; }
+.issue-list li { border-top: 1px solid var(--line); }
+.issue-list a {
+  display: grid; grid-template-columns: 88px 1fr auto; gap: 10px;
+  padding: 12px 4px; color: var(--text); text-decoration: none;
+}
+.issue-list a:hover { background: #1e2430; }
+.id { color: var(--accent); font-family: ui-monospace, monospace; font-size: 0.9rem; }
+.status { color: var(--muted); font-size: 0.85rem; }
+.desc { color: var(--muted); white-space: pre-wrap; }
+.comments { list-style: none; padding: 0; }
+.comments li {
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+}
+.comments .meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+.back { display: inline-block; margin-bottom: 12px; }

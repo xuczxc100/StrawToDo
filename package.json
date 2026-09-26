@@ -1,0 +1,30 @@
+{
+  "name": "strawtodo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-first open-source issue tracker",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @strawtodo/shared && npm run build -w @strawtodo/api && npm run build -w @strawtodo/mcp && npm run build -w @strawtodo/web",
+    "dev:api": "npm run dev -w @strawtodo/api",
+    "dev:web": "npm run dev -w @strawtodo/web",
+    "dev:mcp": "npm run start -w @strawtodo/mcp",
+    "test": "npm run test -w @strawtodo/api && npm run test -w @strawtodo/mcp",
+    "test:contract": "npm run test:contract -w @strawtodo/api",
+    "test:e2e:agent": "npm run test:e2e:agent -w @strawtodo/api",
+    "test:e2e:ui": "playwright test",
+    "check": "npm run build && npm run test",
+    "db:migrate": "npm run db:migrate -w @strawtodo/api",
+    "openapi:export": "npm run openapi:export -w @strawtodo/api"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

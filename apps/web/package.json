@@ -1,0 +1,22 @@
+{
+  "name": "@strawtodo/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3041 --host",
+    "build": "vite build",
+    "preview": "vite preview --port 3041 --host",
+    "test": "echo 'web unit tests via playwright at repo root'"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
+    "vue-tsc": "^2.2.8"
+  }
+}

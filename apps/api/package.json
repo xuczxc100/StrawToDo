@@ -1,0 +1,30 @@
+{
+  "name": "@strawtodo/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json && cp src/db/schema.sql dist/db/schema.sql",
+    "start": "node dist/index.js",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "openapi:export": "tsx src/openapi/export.ts",
+    "test": "tsx --test src/**/*.test.ts",
+    "test:contract": "tsx --test src/tests/contract.test.ts",
+    "test:e2e:agent": "tsx --test src/tests/agent-e2e.test.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "@strawtodo/shared": "0.1.0",
+    "hono": "^4.7.5",
+    "pg": "^8.14.1",
+    "ulid": "^2.3.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/pg": "^8.11.11",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

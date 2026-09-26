@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: strawtodo-db
+    environment:
+      POSTGRES_USER: strawtodo
+      POSTGRES_PASSWORD: strawtodo
+      POSTGRES_DB: strawtodo
+    ports:
+      - "5433:5432"
+    volumes:
+      - strawtodo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U strawtodo -d strawtodo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: strawtodo-api
+    environment:
+      PORT: "3040"
+      DATABASE_URL: postgres://strawtodo:strawtodo@db:5432/strawtodo
+      BOOTSTRAP_API_KEY: ${BOOTSTRAP_API_KEY:-std_dev_bootstrap_key_change_me}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
+      CORS_ORIGIN: "*"
+    ports:
+      - "3040:3040"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: strawtodo-web
+    ports:
+      - "3041:80"
+    depends_on:
+      - api
+
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    container_name: strawtodo-mcp
+    environment:
+      STRAWTODO_API_BASE: http://api:3040
+      STRAWTODO_API_KEY: ${BOOTSTRAP_API_KEY:-std_dev_bootstrap_key_change_me}
+    depends_on:
+      - api
+    profiles: ["mcp-sidecar"]
+    stdin_open: true
+    tty: true
+
+volumes:
+  strawtodo_pg:
+
+networks:
+  default:
+    name: 1panel-network
+    external: true
