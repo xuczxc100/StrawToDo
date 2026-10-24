@@ -23,6 +23,29 @@ export async function migrate(): Promise<{
   const pool = getPool();
   const sql = readFileSync(join(__dirname, "schema.sql"), "utf8");
   await pool.query(sql);
+  await pool.query(`
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS key TEXT;
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS cwd TEXT NOT NULL DEFAULT '';
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS default_prompt TEXT NOT NULL DEFAULT '';
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS issue_type TEXT NOT NULL DEFAULT 'feature';
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS assignee_type TEXT NOT NULL DEFAULT 'agent';
+    ALTER TABLE issues ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
+    ALTER TABLE comments ADD COLUMN IF NOT EXISTS author_type TEXT NOT NULL DEFAULT 'user';
+    ALTER TABLE comments ADD COLUMN IF NOT EXISTS run_id UUID;
+    CREATE TABLE IF NOT EXISTS runs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+      job_id TEXT,
+      status TEXT NOT NULL DEFAULT 'queued',
+      model TEXT NOT NULL DEFAULT 'auto',
+      log_text TEXT NOT NULL DEFAULT '',
+      started_at TIMESTAMPTZ,
+      ended_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_issues_sort ON issues(status, sort_order)`);
 
   const ws = await pool.query<{ id: string }>(
     `INSERT INTO workspaces (name)

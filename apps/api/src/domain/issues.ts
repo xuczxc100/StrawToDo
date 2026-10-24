@@ -5,6 +5,7 @@ import type {
   CreateProjectInput,
   IssuePriority,
   IssueStatus,
+  ReorderIssuesInput,
   UpdateIssueInput,
   WebhookEventType,
 } from "@strawtodo/shared";
@@ -28,6 +29,9 @@ export type IssueRow = {
   description: string;
   status: IssueStatus;
   priority: IssuePriority;
+  issue_type: string;
+  assignee_type: string;
+  sort_order: number;
   assignee_id: string | null;
   created_by: string;
   created_at: Date;
@@ -46,6 +50,9 @@ function mapIssue(row: IssueRow & { label_ids?: string[] | null }) {
     description: row.description,
     status: row.status,
     priority: row.priority,
+    issue_type: row.issue_type || "feature",
+    assignee_type: row.assignee_type || "agent",
+    sort_order: row.sort_order ?? 0,
     assignee_id: row.assignee_id,
     label_ids: row.label_ids ?? [],
     created_by: row.created_by,
@@ -107,7 +114,7 @@ async function loadLabels(
 
 export async function listProjects(auth: AuthContext) {
   const r = await getPool().query(
-    `SELECT id, team_id, name, description, created_at, updated_at
+    `SELECT id, team_id, name, description, key, cwd, default_prompt, created_at, updated_at
      FROM projects WHERE team_id = $1 ORDER BY created_at DESC`,
     [auth.teamId],
   );
@@ -116,6 +123,9 @@ export async function listProjects(auth: AuthContext) {
     team_id: row.team_id,
     name: row.name,
     description: row.description,
+    key: row.key,
+    cwd: row.cwd,
+    default_prompt: row.default_prompt,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   }));
@@ -126,10 +136,17 @@ export async function createProject(
   input: CreateProjectInput,
 ) {
   const r = await getPool().query(
-    `INSERT INTO projects (team_id, name, description)
-     VALUES ($1, $2, $3)
-     RETURNING id, team_id, name, description, created_at, updated_at`,
-    [auth.teamId, input.name, input.description ?? ""],
+    `INSERT INTO projects (team_id, name, description, key, cwd, default_prompt)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, team_id, name, description, key, cwd, default_prompt, created_at, updated_at`,
+    [
+      auth.teamId,
+      input.name,
+      input.description ?? "",
+      input.key ?? null,
+      input.cwd ?? "",
+      input.default_prompt ?? "",
+    ],
   );
   const row = r.rows[0];
   return {
@@ -137,6 +154,9 @@ export async function createProject(
     team_id: row.team_id,
     name: row.name,
     description: row.description,
+    key: row.key,
+    cwd: row.cwd,
+    default_prompt: row.default_prompt,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
@@ -175,7 +195,7 @@ export async function listIssues(
      LEFT JOIN issue_labels il ON il.issue_id = i.id
      WHERE ${where.join(" AND ")}
      GROUP BY i.id
-     ORDER BY i.updated_at DESC
+     ORDER BY i.sort_order ASC, i.created_at ASC
      LIMIT $${params.length}`,
     params,
   );
@@ -218,11 +238,18 @@ export async function createIssue(auth: AuthContext, input: CreateIssueInput) {
       number,
     ]);
 
+    const status = input.status ?? "backlog";
+    const orderRes = await client.query<{ n: number }>(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS n
+       FROM issues WHERE team_id = $1 AND status = $2`,
+      [auth.teamId, status],
+    );
     const ins = await client.query<IssueRow>(
       `INSERT INTO issues (
          team_id, project_id, number, identifier, title, description,
-         status, priority, assignee_id, created_by
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         status, priority, issue_type, assignee_type, sort_order,
+         assignee_id, created_by
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         auth.teamId,
@@ -231,8 +258,11 @@ export async function createIssue(auth: AuthContext, input: CreateIssueInput) {
         identifier,
         input.title,
         input.description ?? "",
-        input.status ?? "backlog",
+        status,
         input.priority ?? "none",
+        input.issue_type ?? "feature",
+        input.assignee_type ?? "agent",
+        input.sort_order ?? orderRes.rows[0].n,
         input.assignee_id ?? null,
         auth.createdBy,
       ],
@@ -250,6 +280,7 @@ export async function updateIssue(
   auth: AuthContext,
   idOrIdentifier: string,
   input: UpdateIssueInput,
+  opts: { actor?: "user" | "agent" } = {},
 ) {
   return withTransaction(async (client) => {
     const cur = await client.query<IssueRow>(
@@ -260,11 +291,26 @@ export async function updateIssue(
       throw new AppError("not_found", `Issue not found: ${idOrIdentifier}`, 404);
     }
     const before = cur.rows[0];
+    if (opts.actor === "agent" && input.status === "done") {
+      throw new AppError("forbidden_status", "Agent 不能把 Issue 標成 Done", 403);
+    }
+    let sortOrder = input.sort_order ?? before.sort_order;
+    if (input.status && input.status !== before.status && input.sort_order === undefined) {
+      const orderRes = await client.query<{ n: number }>(
+        `SELECT COALESCE(MAX(sort_order), -1) + 1 AS n
+         FROM issues WHERE team_id = $1 AND status = $2 AND id <> $3`,
+        [auth.teamId, input.status, before.id],
+      );
+      sortOrder = orderRes.rows[0].n;
+    }
     const next = {
       title: input.title ?? before.title,
       description: input.description ?? before.description,
       status: (input.status ?? before.status) as IssueStatus,
       priority: (input.priority ?? before.priority) as IssuePriority,
+      issue_type: input.issue_type ?? before.issue_type ?? "feature",
+      assignee_type: input.assignee_type ?? before.assignee_type ?? "agent",
+      sort_order: sortOrder,
       project_id:
         input.project_id !== undefined ? input.project_id : before.project_id,
       assignee_id:
@@ -273,7 +319,8 @@ export async function updateIssue(
     const upd = await client.query<IssueRow>(
       `UPDATE issues SET
          title = $2, description = $3, status = $4, priority = $5,
-         project_id = $6, assignee_id = $7, updated_at = now()
+         issue_type = $6, assignee_type = $7, sort_order = $8,
+         project_id = $9, assignee_id = $10, updated_at = now()
        WHERE id = $1
        RETURNING *`,
       [
@@ -282,6 +329,9 @@ export async function updateIssue(
         next.description,
         next.status,
         next.priority,
+        next.issue_type,
+        next.assignee_type,
+        next.sort_order,
         next.project_id,
         next.assignee_id,
       ],
@@ -307,7 +357,7 @@ export async function updateIssue(
 export async function listComments(auth: AuthContext, idOrIdentifier: string) {
   const issue = await getIssue(auth, idOrIdentifier);
   const r = await getPool().query(
-    `SELECT id, issue_id, body, created_by, created_at
+    `SELECT id, issue_id, body, created_by, author_type, run_id, created_at
      FROM comments WHERE issue_id = $1 ORDER BY created_at ASC`,
     [issue.id],
   );
@@ -316,6 +366,8 @@ export async function listComments(auth: AuthContext, idOrIdentifier: string) {
     issue_id: row.issue_id,
     body: row.body,
     created_by: row.created_by,
+    author_type: row.author_type || "user",
+    run_id: row.run_id,
     created_at: row.created_at.toISOString(),
   }));
 }
@@ -335,9 +387,9 @@ export async function addComment(
     }
     const issueId = cur.rows[0].id;
     const ins = await client.query(
-      `INSERT INTO comments (issue_id, body, created_by)
-       VALUES ($1, $2, $3)
-       RETURNING id, issue_id, body, created_by, created_at`,
+      `INSERT INTO comments (issue_id, body, created_by, author_type)
+       VALUES ($1, $2, $3, 'user')
+       RETURNING id, issue_id, body, created_by, author_type, run_id, created_at`,
       [issueId, input.body, auth.createdBy],
     );
     const row = ins.rows[0];
@@ -346,6 +398,8 @@ export async function addComment(
       issue_id: row.issue_id,
       body: row.body,
       created_by: row.created_by,
+      author_type: row.author_type || "user",
+      run_id: row.run_id,
       created_at: row.created_at.toISOString(),
     };
     await enqueue(client, "comment.created", { comment });
@@ -359,4 +413,52 @@ export async function search(
   limit = 25,
 ) {
   return listIssues(auth, { q, limit });
+}
+
+export async function addAgentComment(
+  auth: AuthContext,
+  idOrIdentifier: string,
+  body: string,
+  runId?: string,
+) {
+  return withTransaction(async (client) => {
+    const cur = await client.query<{ id: string }>(
+      `SELECT id FROM issues WHERE team_id = $1 AND (id::text = $2 OR identifier = $2)`,
+      [auth.teamId, idOrIdentifier],
+    );
+    if (!cur.rows[0]) {
+      throw new AppError("not_found", `Issue not found: ${idOrIdentifier}`, 404);
+    }
+    const ins = await client.query(
+      `INSERT INTO comments (issue_id, body, created_by, author_type, run_id)
+       VALUES ($1, $2, 'agent', 'agent', $3)
+       RETURNING id, issue_id, body, created_by, author_type, run_id, created_at`,
+      [cur.rows[0].id, body, runId ?? null],
+    );
+    const row = ins.rows[0];
+    const comment = {
+      id: row.id,
+      issue_id: row.issue_id,
+      body: row.body,
+      created_by: row.created_by,
+      author_type: row.author_type,
+      run_id: row.run_id,
+      created_at: row.created_at.toISOString(),
+    };
+    await enqueue(client, "comment.created", { comment });
+    return comment;
+  });
+}
+
+export async function reorderIssues(auth: AuthContext, input: ReorderIssuesInput) {
+  return withTransaction(async (client) => {
+    for (const [index, id] of input.ids.entries()) {
+      await client.query(
+        `UPDATE issues
+         SET status = $3, sort_order = $4, updated_at = now()
+         WHERE team_id = $1 AND (id::text = $2 OR identifier = $2)`,
+        [auth.teamId, id, input.status, index],
+      );
+    }
+  });
 }

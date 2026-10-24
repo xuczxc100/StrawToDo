@@ -1,49 +1,30 @@
 # StrawToDo
 
-Agent-first 開源 Issue Tracker：給人用的薄 Web UI，給 AI agent 用的一等公民 **OpenAPI / MCP / Webhook**。
+Linear 式任務板：你安排 Issue，每一張由 Cursor Agent 獨立跑完並寫回回應。做完自動進 **In Review**，Agent 不能自己標 Done。
 
-**授權：** Apache-2.0 · **版本：** 0.1.0 · **分支：** `main` only
+**版本：** 0.2.0.1 · **分支：** `main` only · **授權：** Apache-2.0
 
-## 一分鐘自架
+公開站：`https://todo.wastebase.xyz`
+
+## 核心迴圈
+
+安排 Issue → Todo 佇列 → 執行 Agent → In Progress → 寫回 comment → In Review → 你標 Done 或 Restart。
+
+全站同時只跑 **一個** Run，避免兩張任務搶同一工作區。
+
+## 本機
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
-curl -s http://localhost:3040/v1/health
-# Web UI: http://localhost:3041
-# OpenAPI: http://localhost:3040/docs
-```
-
-預設 bootstrap API Key（可在 `.env` 改 `BOOTSTRAP_API_KEY`）：
-
-```text
-std_dev_bootstrap_key_change_me
-```
-
-在 Web UI 右上角貼上 API Key 後即可建立／更新議題。
-
-## Agent（MCP）
-
-```bash
-export STRAWTODO_API_BASE=http://localhost:3040
-export STRAWTODO_API_KEY=std_dev_bootstrap_key_change_me
-npm run start -w @strawtodo/mcp
-```
-
-MCP tools：`list_issues`、`get_issue`、`create_issue`、`update_issue`、`add_comment`、`search`。
-
-## 本機開發
-
-```bash
-# 先起 DB
 docker compose up -d db
-cp .env.example .env
 npm install
 export $(grep -v '^#' .env | xargs)
 npm run db:migrate
-npm run dev:api   # :3040
+npm run dev:api   # :3040，AGENT_MODE=mock 不打真 Agent
 npm run dev:web   # :3041
 ```
+
+Web 右上角 API Key 預設 `std_dev_bootstrap_key_change_me`（`EXPOSE_UI_KEY=1` 時會自動填）。
 
 ## 測試
 
@@ -54,20 +35,26 @@ npm run check
 npx playwright test
 ```
 
-## 倉庫結構
+## 自架（接真實 Cursor Agent）
 
-```text
-apps/api     Hono + Postgres REST API
-apps/web     Vue 3 薄 UI
-apps/mcp     MCP stdio server
-packages/shared  Zod schemas + glossary
-docs/        OpenAPI 匯出、webhook、MVP checklist
+API 使用 `network_mode: host`，才能打本機 `cursor-openai-bridge`（`127.0.0.1:8643`）。
+
+```bash
+# deploy/.env（勿進 git）
+BOOTSTRAP_API_KEY=...
+BRIDGE_API_KEY=...
+AGENT_MODE=bridge
+EXPOSE_UI_KEY=1
+docker compose up -d --build
+curl -s http://127.0.0.1:3040/v1/health
+# UI: http://127.0.0.1:3041
 ```
 
-## 非目標（v0.1）
+## 倉庫
 
-完整 Linear 級看板客製、複雜權限／SSO、行動 App、一鍵 Linear 匯入、即時多人游標。詳見 [docs/non-goals.md](docs/non-goals.md)。
-
-## 安全
-
-見 [SECURITY.md](SECURITY.md)。Webhook 簽章見 [docs/webhook.md](docs/webhook.md)。
+```text
+apps/api     Hono + Postgres
+apps/web     Vue 3 Board / List / Queue / Issue
+apps/mcp     MCP stdio（讀寫 Issue）
+packages/shared  Zod
+```

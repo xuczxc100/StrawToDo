@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "StrawToDo API",
-    "version": "0.1.0",
+    "version": "0.2.0.1",
     "description": "Agent-first issue tracker. Authenticate with Authorization: Bearer <API_KEY> or X-Api-Key."
   },
   "servers": [
@@ -317,6 +317,60 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/issues/{id}/runs": {
+      "get": {
+        "summary": "List runs for an issue",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "summary": "Start an Agent run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "Busy"
+          }
+        }
+      }
+    },
+    "/queue/start": {
+      "post": {
+        "summary": "Run the next Todo",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "Busy"
           }
         }
       }

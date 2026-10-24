@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
 import {
   CreateCommentSchema,
   CreateIssueSchema,
   CreateProjectSchema,
+  CreateRunSchema,
+  ReorderIssuesSchema,
   UpdateIssueSchema,
 } from "@strawtodo/shared";
 import { requireApiKey, type AppVariables } from "./auth.js";
@@ -18,11 +21,20 @@ import {
   listComments,
   listIssues,
   listProjects,
+  reorderIssues,
   search,
   updateIssue,
 } from "./domain/issues.js";
+import {
+  cancelRun,
+  getRun,
+  listRuns,
+  startQueue,
+  startRun,
+} from "./domain/runs.js";
 import { generateApiKey, hashApiKey } from "./db/migrate.js";
 import { getPool } from "./db/pool.js";
+import { appVersion } from "./version.js";
 
 export function createApp() {
   const app = new Hono<{ Variables: AppVariables }>();
@@ -48,8 +60,17 @@ export function createApp() {
   });
 
   app.get("/v1/health", (c) =>
-    c.json({ ok: true, service: "strawtodo-api", version: "0.1.0" }),
+    c.json({ ok: true, service: "strawtodo-api", version: appVersion() }),
   );
+
+  app.get("/v1/ui-config", (c) => {
+    const expose = process.env.EXPOSE_UI_KEY === "1" || process.env.EXPOSE_UI_KEY === "true";
+    return c.json({
+      version: appVersion(),
+      expose_key: expose,
+      default_api_key: expose ? process.env.BOOTSTRAP_API_KEY || "" : "",
+    });
+  });
 
   app.get("/v1/openapi.json", (c) => c.json(openApiDocument));
   app.get("/openapi.json", (c) => c.json(openApiDocument));
@@ -130,6 +151,16 @@ a{color:#5b8def} pre{background:#171b24;padding:1rem;border-radius:8px;overflow:
     return c.json(issue);
   });
 
+  v1.post("/issues/reorder", async (c) => {
+    const raw = await c.req.json();
+    const parsed = ReorderIssuesSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new AppError("validation_error", "Invalid reorder", 400, parsed.error.flatten());
+    }
+    await reorderIssues(c.get("auth"), parsed.data);
+    return c.json({ ok: true });
+  });
+
   v1.patch("/issues/:id", async (c) => {
     const raw = await c.req.json();
     const parsed = UpdateIssueSchema.safeParse(raw);
@@ -153,6 +184,50 @@ a{color:#5b8def} pre{background:#171b24;padding:1rem;border-radius:8px;overflow:
     }
     const comment = await addComment(c.get("auth"), c.req.param("id"), parsed.data);
     return c.json(comment, 201);
+  });
+
+  v1.get("/issues/:id/runs", async (c) => {
+    const items = await listRuns(c.get("auth"), c.req.param("id"));
+    return c.json({ items });
+  });
+
+  v1.post("/issues/:id/runs", async (c) => {
+    const raw = (await c.req.json().catch(() => ({}))) as unknown;
+    const parsed = CreateRunSchema.safeParse(raw || {});
+    if (!parsed.success) {
+      throw new AppError("validation_error", "Invalid run", 400, parsed.error.flatten());
+    }
+    const run = await startRun(c.get("auth"), c.req.param("id"), parsed.data.model);
+    return c.json(run, 201);
+  });
+
+  v1.get("/runs/:id", async (c) => {
+    const run = await getRun(c.get("auth"), c.req.param("id"));
+    return c.json(run);
+  });
+
+  v1.post("/runs/:id/cancel", async (c) => {
+    const run = await cancelRun(c.get("auth"), c.req.param("id"));
+    return c.json(run);
+  });
+
+  v1.get("/runs/:id/stream", async (c) => {
+    const auth = c.get("auth");
+    const runId = c.req.param("id");
+    await getRun(auth, runId);
+    return streamSSE(c, async (stream) => {
+      for (let i = 0; i < 180; i++) {
+        const run = await getRun(auth, runId);
+        await stream.writeSSE({ event: "run", data: JSON.stringify(run) });
+        if (!["queued", "running"].includes(run.status)) break;
+        await stream.sleep(1000);
+      }
+    });
+  });
+
+  v1.post("/queue/start", async (c) => {
+    const run = await startQueue(c.get("auth"));
+    return c.json(run, 201);
   });
 
   v1.get("/search", async (c) => {

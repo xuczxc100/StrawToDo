@@ -1,8 +1,8 @@
 {
   "name": "strawtodo",
-  "version": "0.1.0",
+  "version": "0.2.0-1",
   "private": true,
-  "description": "Agent-first open-source issue tracker",
+  "description": "Linear-style issue board; each issue gets its own Agent run",
   "license": "Apache-2.0",
   "workspaces": [
     "apps/*",
@@ -17,6 +17,7 @@
     "test:contract": "npm run test:contract -w @strawtodo/api",
     "test:e2e:agent": "npm run test:e2e:agent -w @strawtodo/api",
     "test:e2e:ui": "playwright test",
+    "bump": "bash scripts/bump-version.sh",
     "check": "npm run build && npm run test",
     "db:migrate": "npm run db:migrate -w @strawtodo/api",
     "openapi:export": "npm run openapi:export -w @strawtodo/api"

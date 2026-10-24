@@ -1,6 +1,6 @@
 {
   "name": "@strawtodo/api",
-  "version": "0.1.0",
+  "version": "0.2.0-1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,13 +9,13 @@
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "openapi:export": "tsx src/openapi/export.ts",
-    "test": "tsx --test src/**/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 src/**/*.test.ts",
     "test:contract": "tsx --test src/tests/contract.test.ts",
     "test:e2e:agent": "tsx --test src/tests/agent-e2e.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
-    "@strawtodo/shared": "0.1.0",
+    "@strawtodo/shared": "0.2.0-1",
     "hono": "^4.7.5",
     "pg": "^8.14.1",
     "ulid": "^2.3.0",

@@ -4,6 +4,7 @@ build/
 .coverage/
 .env
 .env.local
+deploy/.env
 *.log
 .DS_Store
 .playwright-mcp/

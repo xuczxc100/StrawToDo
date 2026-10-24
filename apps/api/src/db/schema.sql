@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS projects (
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
+  key TEXT,
+  cwd TEXT NOT NULL DEFAULT '',
+  default_prompt TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -54,6 +57,9 @@ CREATE TABLE IF NOT EXISTS issues (
   description TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'backlog',
   priority TEXT NOT NULL DEFAULT 'none',
+  issue_type TEXT NOT NULL DEFAULT 'feature',
+  assignee_type TEXT NOT NULL DEFAULT 'agent',
+  sort_order INT NOT NULL DEFAULT 0,
   assignee_id UUID,
   created_by TEXT NOT NULL DEFAULT 'api_key',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -77,8 +83,24 @@ CREATE TABLE IF NOT EXISTS comments (
   issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
   body TEXT NOT NULL,
   created_by TEXT NOT NULL DEFAULT 'api_key',
+  author_type TEXT NOT NULL DEFAULT 'user',
+  run_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+  job_id TEXT,
+  status TEXT NOT NULL DEFAULT 'queued',
+  model TEXT NOT NULL DEFAULT 'auto',
+  log_text TEXT NOT NULL DEFAULT '',
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
 
 CREATE TABLE IF NOT EXISTS idempotency_keys (
   key TEXT PRIMARY KEY,
