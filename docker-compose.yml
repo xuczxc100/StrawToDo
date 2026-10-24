@@ -45,6 +45,8 @@ services:
       BRIDGE_URL: ${BRIDGE_URL:-http://127.0.0.1:8643}
       BRIDGE_API_KEY: ${BRIDGE_API_KEY:-}
       BRIDGE_JOBS_DIR: /var/lib/cursor-openai-bridge/jobs
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_NOTIFY_CHAT_ID: ${TELEGRAM_NOTIFY_CHAT_ID:-}
     volumes:
       - /var/lib/cursor-openai-bridge/jobs:/var/lib/cursor-openai-bridge/jobs:ro
     depends_on:

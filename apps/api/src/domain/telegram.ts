@@ -1,8 +1,14 @@
 import type { TelegramTodoItem } from "@strawtodo/shared";
 import { AppError } from "../errors.js";
 import type { AuthContext } from "./issues.js";
-import { createIssue, getIssue, listComments, listIssues } from "./issues.js";
-import { getRun, hasActiveRun, listRuns, startQueue, startRun } from "./runs.js";
+import { createIssue, deleteIssue, getIssue, listComments, listIssues } from "./issues.js";
+import {
+  hasActiveRunForIssue,
+  listActiveRuns,
+  listRuns,
+  startQueue,
+  startRun,
+} from "./runs.js";
 
 export function normalizeInboxItems(
   raw: TelegramTodoItem | { items: TelegramTodoItem[] },
@@ -32,48 +38,55 @@ export async function ingestTelegramTodos(
     );
   }
 
-  let run: Awaited<ReturnType<typeof startRun>> | null = null;
-  let queued = true;
-  let busy = false;
-  let message = `已建立 ${created.map((i) => i.identifier).join("、")}`;
-  const runAt = items.findIndex((item) => item.run);
-  if (runAt >= 0) {
+  const runs: Array<Awaited<ReturnType<typeof startRun>>> = [];
+  const started: string[] = [];
+  const blocked: string[] = [];
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i].run) continue;
     try {
-      run = await startRun(auth, created[runAt].identifier);
-      queued = false;
-      message = `${message}；已開始執行 ${created[runAt].identifier}`;
+      runs.push(await startRun(auth, created[i].identifier));
+      started.push(created[i].identifier);
     } catch (err) {
       if (err instanceof AppError && err.status === 409) {
-        busy = true;
-        message = `${message}；目前有 Run 在跑，${created[runAt].identifier} 留在 Todo 佇列`;
+        blocked.push(created[i].identifier);
       } else {
         throw err;
       }
     }
+  }
+
+  let message = `已建立 ${created.map((i) => i.identifier).join("、")}`;
+  if (started.length) {
+    message = `${message}；已開始執行 ${started.join("、")}`;
+  } else if (items.some((item) => item.run)) {
+    message = `${message}；未能立刻派工，留在 Todo 佇列`;
   } else {
     message = `${message}，已放入 Todo 佇列`;
   }
+  if (blocked.length) {
+    message = `${message}（${blocked.join("、")} 該單已有進行中 Run）`;
+  }
 
-  return { items: created, run, queued, busy, message };
+  return {
+    items: created,
+    runs,
+    run: runs[0] || null,
+    queued: runs.length === 0,
+    busy: blocked.length > 0,
+    message,
+  };
 }
 
 export async function telegramQueue(auth: AuthContext) {
-  const [todos, inProgress, inReview] = await Promise.all([
+  const [todos, inProgress, inReview, active_runs] = await Promise.all([
     listIssues(auth, { status: "todo", limit: 50 }),
     listIssues(auth, { status: "in_progress", limit: 20 }),
     listIssues(auth, { status: "in_review", limit: 20 }),
+    listActiveRuns(auth.teamId),
   ]);
-  let active_run: Awaited<ReturnType<typeof getRun>> | null = null;
-  if (await hasActiveRun()) {
-    const runningIssue = inProgress[0];
-    if (runningIssue) {
-      const runs = await listRuns(auth, runningIssue.identifier);
-      const live = runs.find((r) => r.status === "running" || r.status === "queued");
-      active_run = live || null;
-    }
-  }
   return {
-    active_run,
+    active_runs,
+    active_run: active_runs[0] || null,
     todos,
     in_progress: inProgress,
     in_review: inReview,
@@ -95,4 +108,13 @@ export async function telegramRun(auth: AuthContext, id: string, model?: string)
 export async function telegramStartNext(auth: AuthContext) {
   const run = await startQueue(auth);
   return { run, message: "已開始執行佇列下一張" };
+}
+
+export async function telegramDelete(auth: AuthContext, id: string) {
+  const issue = await getIssue(auth, id);
+  if (await hasActiveRunForIssue(issue.id)) {
+    throw new AppError("run_busy", `${issue.identifier} 進行中，不能刪除`, 409);
+  }
+  await deleteIssue(auth, issue.id);
+  return { deleted: issue.identifier, message: `已刪除 ${issue.identifier}` };
 }

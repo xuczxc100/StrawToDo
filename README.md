@@ -2,7 +2,7 @@
 
 Linear 式任務板：你安排 Issue，每一張由 Cursor Agent 獨立跑完並寫回回應。做完自動進 **In Review**，Agent 不能自己標 Done。
 
-**版本：** 0.2.1.3 · **分支：** `main` only · **授權：** Apache-2.0
+**版本：** 0.2.1.4 · **分支：** `main` only · **授權：** Apache-2.0
 
 公開站：`https://todo.wastebase.xyz`
 
@@ -10,7 +10,7 @@ Linear 式任務板：你安排 Issue，每一張由 Cursor Agent 獨立跑完�
 
 安排 Issue → Todo 佇列 → 執行 Agent → In Progress → 寫回 comment → In Review → 你標 Done 或 Restart。
 
-全站同時只跑 **一個** Run，避免兩張任務搶同一工作區。
+多張 Issue 可同時跑（各開一個 Cursor job）。同一張 Issue 同時只能有一個 Run。
 
 ## 本機
 

@@ -43,6 +43,7 @@ import {
 import {
   ingestTelegramTodos,
   normalizeInboxItems,
+  telegramDelete,
   telegramQueue,
   telegramRun,
   telegramShow,
@@ -60,7 +61,7 @@ export function createApp() {
     cors({
       origin: process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["*"],
       allowHeaders: ["Authorization", "Content-Type", "X-Api-Key", "Idempotency-Key"],
-      allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
       credentials: true,
     }),
   );
@@ -300,6 +301,10 @@ a{color:#5b8def} pre{background:#171b24;padding:1rem;border-radius:8px;overflow:
 
   v1.get("/telegram/todos/:id", async (c) => {
     return c.json(await telegramShow(c.get("auth"), c.req.param("id")));
+  });
+
+  v1.delete("/telegram/todos/:id", async (c) => {
+    return c.json(await telegramDelete(c.get("auth"), c.req.param("id")));
   });
 
   v1.post("/telegram/todos/:id/run", async (c) => {

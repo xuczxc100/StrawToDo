@@ -1,3 +1,4 @@
+import https from "node:https";
 import type { AuthContext } from "./issues.js";
 import { addAgentComment, getIssue, listComments, updateIssue } from "./issues.js";
 import { AppError } from "../errors.js";
@@ -30,11 +31,75 @@ function mapRun(row: RunRow) {
   };
 }
 
-export async function hasActiveRun(): Promise<boolean> {
+export async function hasActiveRunForIssue(issueId: string): Promise<boolean> {
   const r = await getPool().query(
-    `SELECT 1 FROM runs WHERE status IN ('queued', 'running') LIMIT 1`,
+    `SELECT 1 FROM runs WHERE issue_id = $1 AND status IN ('queued', 'running') LIMIT 1`,
+    [issueId],
   );
   return (r.rowCount ?? 0) > 0;
+}
+
+export async function listActiveRuns(teamId: string) {
+  const r = await getPool().query<RunRow>(
+    `SELECT r.* FROM runs r
+     JOIN issues i ON i.id = r.issue_id
+     WHERE i.team_id = $1 AND r.status IN ('queued', 'running')
+     ORDER BY r.started_at ASC NULLS LAST, r.created_at ASC`,
+    [teamId],
+  );
+  return r.rows.map(mapRun);
+}
+
+export async function notifyTelegramRun(
+  identifier: string,
+  status: "succeeded" | "failed",
+  body: string,
+  send: typeof postTelegramMessage = postTelegramMessage,
+): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chat = process.env.TELEGRAM_NOTIFY_CHAT_ID?.trim();
+  if (!token || !chat) return false;
+  const excerpt = (body || "").replace(/\s+/g, " ").trim().slice(0, 800);
+  const text =
+    status === "succeeded"
+      ? `${identifier} 已完成（In Review）\n${excerpt}\nhttps://todo.wastebase.xyz`
+      : `${identifier} 失敗，已回到 Todo\n${excerpt}`;
+  try {
+    await send(token, chat, text);
+    return true;
+  } catch (err) {
+    console.error("[strawtodo] telegram notify", err);
+    return false;
+  }
+}
+
+export function postTelegramMessage(token: string, chatId: string, text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({ chat_id: chatId, text });
+    const req = https.request(
+      {
+        hostname: "api.telegram.org",
+        path: `/bot${token}/sendMessage`,
+        method: "POST",
+        family: 4,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        res.resume();
+        if ((res.statusCode || 0) >= 400) {
+          reject(new Error(`telegram HTTP ${res.statusCode}`));
+          return;
+        }
+        resolve();
+      },
+    );
+    req.on("error", reject);
+    req.setTimeout(10_000, () => req.destroy(new Error("telegram timeout")));
+    req.end(payload);
+  });
 }
 
 export async function listRuns(auth: AuthContext, idOrIdentifier: string) {
@@ -95,14 +160,14 @@ export async function startRun(
   idOrIdentifier: string,
   model?: string,
 ) {
-  if (await hasActiveRun()) {
+  const issue = await getIssue(auth, idOrIdentifier);
+  if (await hasActiveRunForIssue(issue.id)) {
     throw new AppError(
       "run_busy",
-      "已有一張 Issue 的 Agent 正在跑。等它結束或取消後再派下一張。",
+      `${issue.identifier} 已有進行中的 Run`,
       409,
     );
   }
-  const issue = await getIssue(auth, idOrIdentifier);
   if (!["todo", "in_review", "backlog"].includes(issue.status)) {
     throw new AppError(
       "invalid_status",
@@ -166,13 +231,11 @@ export async function cancelRun(auth: AuthContext, runId: string) {
     `UPDATE runs SET status = 'canceled', ended_at = now(), log_text = $2 WHERE id = $1 RETURNING *`,
     [run.id, `${run.log_text}\n已取消。`.trim()],
   );
+  await updateIssue(auth, run.issue_id, { status: "todo" });
   return mapRun(upd.rows[0]);
 }
 
 export async function startQueue(auth: AuthContext) {
-  if (await hasActiveRun()) {
-    throw new AppError("run_busy", "佇列已有進行中的 Run", 409);
-  }
   const next = await getPool().query<{ identifier: string }>(
     `SELECT identifier FROM issues
      WHERE team_id = $1 AND status = 'todo'
@@ -228,8 +291,13 @@ async function finalizeRun(row: RunRow, status: "succeeded" | "failed", body: st
     [row.id, status, body],
   );
 
-  const issue = await getPool().query<{ id: string; team_id: string }>(
-    `SELECT id, team_id FROM issues WHERE id = $1`,
+  const issue = await getPool().query<{
+    id: string;
+    team_id: string;
+    identifier: string;
+    source: string;
+  }>(
+    `SELECT id, team_id, identifier, source FROM issues WHERE id = $1`,
     [row.issue_id],
   );
   if (!issue.rows[0]) return;
@@ -245,8 +313,14 @@ async function finalizeRun(row: RunRow, status: "succeeded" | "failed", body: st
     status === "succeeded" ? body : `Agent 失敗：\n${body}`,
     row.id,
   );
-  if (status === "succeeded") {
-    await updateIssue(auth, issue.rows[0].id, { status: "in_review" }, { actor: "agent" });
+  await updateIssue(
+    auth,
+    issue.rows[0].id,
+    { status: status === "succeeded" ? "in_review" : "todo" },
+    { actor: "agent" },
+  );
+  if (issue.rows[0].source === "telegram") {
+    await notifyTelegramRun(issue.rows[0].identifier, status, body);
   }
 }
 

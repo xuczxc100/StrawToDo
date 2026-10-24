@@ -88,24 +88,64 @@ test("telegram inbox create+run then in_review", async () => {
   }
 });
 
-test("telegram batch second item waits in queue", async () => {
+test("telegram batch two run:true both start", async () => {
   const stamp = `TG-batch-${Date.now()}`;
   const { res, json } = await api("/v1/telegram/todos", {
     method: "POST",
     body: JSON.stringify({
       items: [
         { title: `${stamp}-A`, run: true },
-        { title: `${stamp}-B` },
+        { title: `${stamp}-B`, run: true },
       ],
     }),
   });
   assert.equal(res.status, 201);
-  const body = json as { items: Array<{ identifier: string; title: string }>; message: string };
+  const body = json as {
+    items: Array<{ identifier: string; title: string }>;
+    runs: Array<{ id: string }>;
+    message: string;
+  };
   assert.equal(body.items.length, 2);
+  assert.equal(body.runs.length, 2);
   const queue = await api("/v1/telegram/queue");
   assert.equal(queue.res.status, 200);
-  const q = queue.json as { todos: Array<{ title: string }> };
-  assert.ok(q.todos.some((t) => t.title === `${stamp}-B`));
+  const q = queue.json as { active_runs: Array<{ id: string }>; todos: Array<{ title: string }> };
+  assert.ok(Array.isArray(q.active_runs));
+  assert.ok(q.active_runs.length >= 2);
+});
+
+test("telegram delete removes todo and rejects running", async () => {
+  const hang = {
+    async createJob() {
+      return { job_id: `m${crypto.randomUUID().replace(/-/g, "").slice(0, 31)}` };
+    },
+    async getJob(jobId: string) {
+      return { id: jobId, running: true, exit: null };
+    },
+    async readResult() {
+      return "";
+    },
+  };
+  setJobClientForTests(hang);
+  const idle = await api("/v1/telegram/todos", {
+    method: "POST",
+    body: JSON.stringify({ title: `TG-del-${Date.now()}` }),
+  });
+  const idleId = (idle.json as { items: Array<{ identifier: string }> }).items[0].identifier;
+  const gone = await api(`/v1/telegram/todos/${idleId}`, { method: "DELETE" });
+  assert.equal(gone.res.status, 200);
+  assert.equal((gone.json as { deleted: string }).deleted, idleId);
+  const missing = await api(`/v1/telegram/todos/${idleId}`);
+  assert.equal(missing.res.status, 404);
+
+  const running = await api("/v1/telegram/todos", {
+    method: "POST",
+    body: JSON.stringify({ title: `TG-delrun-${Date.now()}`, run: true }),
+  });
+  const runId = (running.json as { items: Array<{ identifier: string }> }).items[0].identifier;
+  const blocked = await api(`/v1/telegram/todos/${runId}`, { method: "DELETE" });
+  assert.equal(blocked.res.status, 409);
+  setJobClientForTests(mockClient());
 });
 
 test("telegram inbox rejects empty title", async () => {

@@ -1,5 +1,12 @@
 # Pending
 
+## 0.2.1.4
+
+- 多張 Issue 可同時跑；同單重複派工才 409。批次 `run:true` 全部派工。
+- Inbox `DELETE /v1/telegram/todos/:id`；CLI `strawtodo rm`。
+- 失敗／取消回到 Todo。`source=telegram` 結束推 Telegram。
+- Queue 文案改為可同時多 Run。
+
 ## 0.2.1.3
 
 - Telegram Inbox API：`POST /v1/telegram/todos` 建單（可 `run:true`）、`GET /v1/telegram/queue`、執行指定／下一張。沒有編輯。

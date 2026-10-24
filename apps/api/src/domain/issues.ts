@@ -468,3 +468,12 @@ export async function reorderIssues(auth: AuthContext, input: ReorderIssuesInput
     }
   });
 }
+
+export async function deleteIssue(auth: AuthContext, idOrIdentifier: string) {
+  const issue = await getIssue(auth, idOrIdentifier);
+  await getPool().query(`DELETE FROM issues WHERE id = $1 AND team_id = $2`, [
+    issue.id,
+    auth.teamId,
+  ]);
+  return issue;
+}

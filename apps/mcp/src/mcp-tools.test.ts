@@ -20,6 +20,7 @@ test("mcp source registers inbox and issue tools", () => {
     "inbox_queue",
     "inbox_show",
     "inbox_run",
+    "inbox_delete",
   ]) {
     assert.match(src, new RegExp(`"${name}"`));
   }

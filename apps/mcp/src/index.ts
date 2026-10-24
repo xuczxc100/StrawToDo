@@ -175,7 +175,7 @@ server.tool(
 
 server.tool(
   "inbox_queue",
-  "Telegram Inbox：看 Todo 佇列與現行 Run",
+  "Telegram Inbox：看 Todo 佇列與 active_runs",
   {},
   async () => {
     const data = await api(`/v1/telegram/queue`);
@@ -200,6 +200,16 @@ server.tool(
   async ({ id }) => {
     const path = id ? `/v1/telegram/todos/${encodeURIComponent(id)}/run` : "/v1/telegram/queue/start";
     const data = await api(path, { method: "POST", body: "{}" });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "inbox_delete",
+  "Telegram Inbox：刪除 Todo（進行中不能刪）",
+  { id: z.string() },
+  async ({ id }) => {
+    const data = await api(`/v1/telegram/todos/${encodeURIComponent(id)}`, { method: "DELETE" });
     return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   },
 );

@@ -2,9 +2,9 @@ export const openApiDocument = {
   openapi: "3.0.3",
   info: {
     title: "StrawToDo API",
-    version: "0.2.1.3",
+    version: "0.2.1.4",
     description:
-      "Telegram Cursor inbox + Linear board. Auth: Authorization: Bearer <API_KEY> or X-Api-Key. Telegram path: POST /telegram/todos (create+run), GET /telegram/queue — no edit.",
+      "Telegram Cursor inbox + Linear board. Auth: Authorization: Bearer <API_KEY> or X-Api-Key. Telegram path: POST /telegram/todos (create+run), GET /telegram/queue, DELETE /telegram/todos/:id — no Board edit.",
   },
   servers: [{ url: "/v1" }],
   components: {
@@ -144,20 +144,20 @@ export const openApiDocument = {
     },
     "/issues/{id}/runs": {
       get: { summary: "List runs for an issue", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "OK" } } },
-      post: { summary: "Start an Agent run", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "201": { description: "Created" }, "409": { description: "Busy" } } },
+      post: { summary: "Start an Agent run", parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }], responses: { "201": { description: "Created" }, "409": { description: "This issue already running" } } },
     },
     "/queue/start": {
-      post: { summary: "Run the next Todo", responses: { "201": { description: "Created" }, "409": { description: "Busy" } } },
+      post: { summary: "Run the next Todo", responses: { "201": { description: "Created" }, "404": { description: "Empty" } } },
     },
     "/telegram/todos": {
       post: {
-        summary: "Telegram Inbox：建 Todo（可一次多張），run:true 立刻派工。不編輯。",
+        summary: "Telegram Inbox：建 Todo（可一次多張）。每個 run:true 都會派工，可同時多張。",
         parameters: [{ name: "Idempotency-Key", in: "header", schema: { type: "string" } }],
-        responses: { "201": { description: "Created" }, "409": { description: "Busy run queued as todo" } },
+        responses: { "201": { description: "Created" } },
       },
     },
     "/telegram/queue": {
-      get: { summary: "Telegram Inbox：Todo／進行中／待審＋現行 Run", responses: { "200": { description: "OK" } } },
+      get: { summary: "Telegram Inbox：Todo／進行中／待審＋ active_runs", responses: { "200": { description: "OK" } } },
     },
     "/telegram/todos/{id}": {
       get: {
@@ -165,16 +165,21 @@ export const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: { "200": { description: "OK" } },
       },
+      delete: {
+        summary: "Telegram Inbox：刪除（進行中 409）",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Deleted" }, "409": { description: "Running" } },
+      },
     },
     "/telegram/todos/{id}/run": {
       post: {
-        summary: "Telegram Inbox：執行指定 Todo",
+        summary: "Telegram Inbox：執行指定 Todo。同單已在跑才 409。",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { "201": { description: "Started" }, "409": { description: "Busy" } },
+        responses: { "201": { description: "Started" }, "409": { description: "This issue already running" } },
       },
     },
     "/telegram/queue/start": {
-      post: { summary: "Telegram Inbox：執行佇列下一張", responses: { "201": { description: "Created" }, "409": { description: "Busy" } } },
+      post: { summary: "Telegram Inbox：執行佇列下一張（不因其他 Run 而拒絕）", responses: { "201": { description: "Created" }, "404": { description: "Empty" } } },
     },
     "/api-keys": {
       post: {

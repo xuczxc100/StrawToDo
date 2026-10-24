@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Telegram Cursor inbox CLI：只建 Todo / 執行 / 查狀態，不編輯。
+# Telegram Cursor inbox CLI：建 Todo / 執行 / 查狀態 / 刪除，不編輯欄位。
 set -euo pipefail
 SCRIPT="$(readlink -f "$0")"
 ROOT="$(cd "$(dirname "$SCRIPT")/.." && pwd)"
@@ -34,13 +34,14 @@ api() {
 
 usage() {
   cat <<'EOF'
-strawtodo — Telegram Inbox（建單＋執行，不編輯）
+strawtodo — Telegram Inbox（建單＋執行＋刪除，不編輯欄位）
 
   strawtodo add "標題" [-d 說明] [--run]
   strawtodo queue
   strawtodo show STD-12
   strawtodo run STD-12
   strawtodo start
+  strawtodo rm STD-12
 
 環境：STRAWTODO_API_BASE（預設 http://127.0.0.1:3040）
      STRAWTODO_API_KEY 或 deploy/.env 的 BOOTSTRAP_API_KEY
@@ -76,6 +77,10 @@ case "$cmd" in
     api POST "/v1/telegram/todos/$1/run" '{}'
     ;;
   start) api POST /v1/telegram/queue/start '{}' ;;
+  rm|delete)
+    [[ -n "${1:-}" ]] || { usage; exit 1; }
+    api DELETE "/v1/telegram/todos/$1"
+    ;;
   -h|--help|help|"") usage ;;
   *) echo "未知指令 $cmd" >&2; usage; exit 1 ;;
 esac
