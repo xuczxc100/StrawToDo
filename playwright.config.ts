@@ -6,7 +6,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3041",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3044",
     trace: "on-first-retry",
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
@@ -14,26 +14,33 @@ export default defineConfig({
     : [
         {
           command: "npm run dev:api",
-          url: "http://127.0.0.1:3040/v1/health",
-          reuseExistingServer: true,
+          url: "http://127.0.0.1:3042/v1/health",
+          reuseExistingServer: false,
           timeout: 60_000,
           env: {
             ...process.env,
-            PORT: "3040",
+            PORT: "3042",
             AGENT_MODE: "mock",
-            EXPOSE_UI_KEY: "1",
+            EXPOSE_UI_KEY: "0",
+            COOKIE_SECURE: "0",
+            LOGIN_USER: process.env.LOGIN_USER || "cz",
+            LOGIN_PASSWORD: process.env.LOGIN_PASSWORD || "strawtodo-local",
             BOOTSTRAP_API_KEY: process.env.BOOTSTRAP_API_KEY || "std_dev_bootstrap_key_change_me",
             DATABASE_URL:
               process.env.DATABASE_URL ||
               "postgres://strawtodo:strawtodo@127.0.0.1:5433/strawtodo",
-            CORS_ORIGIN: "http://localhost:3041",
+            CORS_ORIGIN: "http://127.0.0.1:3044",
           },
         },
         {
-          command: "npm run dev:web",
-          url: "http://127.0.0.1:3041",
-          reuseExistingServer: true,
+          command: "npm run dev:e2e -w @strawtodo/web",
+          url: "http://127.0.0.1:3044",
+          reuseExistingServer: false,
           timeout: 60_000,
+          env: {
+            ...process.env,
+            VITE_API_PROXY: "http://127.0.0.1:3042",
+          },
         },
       ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

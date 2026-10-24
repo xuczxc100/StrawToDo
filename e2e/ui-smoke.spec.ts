@@ -1,15 +1,9 @@
 import { test, expect } from "@playwright/test";
-
-const API_KEY = process.env.BOOTSTRAP_API_KEY || "std_dev_bootstrap_key_change_me";
+import { login } from "./helpers";
 
 test("list → create → detail → comment → done", async ({ page }) => {
+  await login(page);
   await page.goto("/");
-  await page.locator("#apiKey").fill(API_KEY);
-  await page.locator("#apiKey").dispatchEvent("change");
-  await page.reload();
-  await page.locator("#apiKey").fill(API_KEY);
-  await page.locator("#apiKey").dispatchEvent("change");
-
   const title = `PW ${Date.now()}`;
   await page.getByTestId("new-title").fill(title);
   await page.getByTestId("create-btn").click();

@@ -36,7 +36,10 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-change-me-webhook-secret}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      EXPOSE_UI_KEY: ${EXPOSE_UI_KEY:-1}
+      EXPOSE_UI_KEY: ${EXPOSE_UI_KEY:-0}
+      LOGIN_USER: ${LOGIN_USER:-cz}
+      LOGIN_PASSWORD: ${LOGIN_PASSWORD:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
       AGENT_MODE: ${AGENT_MODE:-bridge}
       AGENT_MODEL: ${AGENT_MODEL:-auto}
       BRIDGE_URL: ${BRIDGE_URL:-http://127.0.0.1:8643}

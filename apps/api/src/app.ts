@@ -9,7 +9,14 @@ import {
   ReorderIssuesSchema,
   UpdateIssueSchema,
 } from "@strawtodo/shared";
-import { requireApiKey, type AppVariables } from "./auth.js";
+import {
+  attachSession,
+  clearSession,
+  loginWithPassword,
+  requireApiKey,
+  sessionUser,
+  type AppVariables,
+} from "./auth.js";
 import { toErrorBody, AppError } from "./errors.js";
 import { openApiDocument } from "./openapi/document.js";
 import { lookupIdempotency, storeIdempotency } from "./idempotency.js";
@@ -45,6 +52,7 @@ export function createApp() {
       origin: process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()) ?? ["*"],
       allowHeaders: ["Authorization", "Content-Type", "X-Api-Key", "Idempotency-Key"],
       allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+      credentials: true,
     }),
   );
 
@@ -63,13 +71,31 @@ export function createApp() {
     c.json({ ok: true, service: "strawtodo-api", version: appVersion() }),
   );
 
-  app.get("/v1/ui-config", (c) => {
-    const expose = process.env.EXPOSE_UI_KEY === "1" || process.env.EXPOSE_UI_KEY === "true";
-    return c.json({
+  app.get("/v1/ui-config", (c) =>
+    c.json({
       version: appVersion(),
-      expose_key: expose,
-      default_api_key: expose ? process.env.BOOTSTRAP_API_KEY || "" : "",
-    });
+      login_required: true,
+    }),
+  );
+
+  app.post("/v1/login", async (c) => {
+    const raw = (await c.req.json().catch(() => ({}))) as { username?: string; password?: string };
+    if (!raw.username || !raw.password) {
+      throw new AppError("validation_error", "請輸入帳號和密碼", 400);
+    }
+    const session = await loginWithPassword(raw.username, raw.password);
+    await attachSession(c, session.token);
+    return c.json({ ok: true, username: session.username });
+  });
+
+  app.post("/v1/logout", async (c) => {
+    await clearSession(c);
+    return c.json({ ok: true });
+  });
+
+  app.get("/v1/me", async (c) => {
+    const me = await sessionUser(c);
+    return c.json(me);
   });
 
   app.get("/v1/openapi.json", (c) => c.json(openApiDocument));

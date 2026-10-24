@@ -167,6 +167,28 @@ h2 { font-size: 0.95rem; margin: 1.1rem 0 0.45rem; }
   min-height: 3rem;
 }
 .back { display: inline-block; margin-bottom: 0.7rem; }
+.login-only { min-height: 100vh; }
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.login-card {
+  width: min(360px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.3rem 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.login-card h1 { margin: 0; }
+.login-card label { display: flex; flex-direction: column; gap: 0.25rem; color: var(--muted); font-size: 0.82rem; }
+.login-card button { margin-top: 0.3rem; }
+
 @media (max-width: 720px) {
   .app-shell { display: block; }
   .side { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }

@@ -54,17 +54,18 @@ after(async () => {
 });
 
 test("create three issues, reorder, identifiers increment", async () => {
+  const stamp = `Reorder-${Date.now()}`;
   const a = await api("/v1/issues", {
     method: "POST",
-    body: JSON.stringify({ title: "Reorder A", status: "todo" }),
+    body: JSON.stringify({ title: `${stamp}-A`, status: "todo" }),
   });
   const b = await api("/v1/issues", {
     method: "POST",
-    body: JSON.stringify({ title: "Reorder B", status: "todo" }),
+    body: JSON.stringify({ title: `${stamp}-B`, status: "todo" }),
   });
   const c = await api("/v1/issues", {
     method: "POST",
-    body: JSON.stringify({ title: "Reorder C", status: "todo" }),
+    body: JSON.stringify({ title: `${stamp}-C`, status: "todo" }),
   });
   assert.equal(a.res.status, 201);
   const ids = [a, b, c].map((x) => (x.json as { identifier: string }).identifier);
@@ -76,9 +77,9 @@ test("create three issues, reorder, identifiers increment", async () => {
   assert.equal(reorder.res.status, 200);
   const listed = await api("/v1/issues?status=todo");
   const titles = (listed.json as { items: Array<{ title: string }> }).items
-    .filter((i) => i.title.startsWith("Reorder"))
+    .filter((i) => i.title.startsWith(stamp))
     .map((i) => i.title);
-  assert.deepEqual(titles.slice(0, 3), ["Reorder C", "Reorder A", "Reorder B"]);
+  assert.deepEqual(titles, [`${stamp}-C`, `${stamp}-A`, `${stamp}-B`]);
 });
 
 test("successful run writes agent comment and moves to in_review", async () => {

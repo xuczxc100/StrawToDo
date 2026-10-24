@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { getPool, closePool } from "./pool.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,19 @@ export async function migrate(): Promise<{
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_issues_sort ON issues(status, sort_order)`);
 
@@ -99,6 +113,23 @@ export async function migrate(): Promise<{
       );
       bootstrapKey = gen.raw;
       console.log(`[strawtodo] generated bootstrap API key: ${gen.raw}`);
+    }
+  }
+
+  const loginUser = (process.env.LOGIN_USER || "cz").trim().toLowerCase();
+  const loginPassword = process.env.LOGIN_PASSWORD || "";
+  if (loginPassword) {
+    const passwordHash = bcrypt.hashSync(loginPassword, 10);
+    await pool.query(
+      `INSERT INTO users (username, password_hash)
+       VALUES ($1, $2)
+       ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash`,
+      [loginUser, passwordHash],
+    );
+  } else {
+    const existingUser = await pool.query(`SELECT 1 FROM users LIMIT 1`);
+    if (existingUser.rowCount === 0) {
+      console.warn("[strawtodo] LOGIN_PASSWORD 未設，沒有登入帳號。請設環境變數後重啟。");
     }
   }
 

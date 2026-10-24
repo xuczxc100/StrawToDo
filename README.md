@@ -24,7 +24,7 @@ npm run dev:api   # :3040，AGENT_MODE=mock 不打真 Agent
 npm run dev:web   # :3041
 ```
 
-Web 右上角 API Key 預設 `std_dev_bootstrap_key_change_me`（`EXPOSE_UI_KEY=1` 時會自動填）。
+開站會先到登入頁。帳號由 `LOGIN_USER`／`LOGIN_PASSWORD` 在 migrate 時寫入（密碼只存 bcrypt）。Agent／MCP 仍可用 API Key。
 
 ## 測試
 
