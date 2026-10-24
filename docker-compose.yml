@@ -31,7 +31,6 @@ services:
     network_mode: host
     environment:
       PORT: "3040"
-      APP_VERSION: "0.2.0.1"
       DATABASE_URL: postgres://strawtodo:strawtodo@127.0.0.1:5433/strawtodo
       BOOTSTRAP_API_KEY: ${BOOTSTRAP_API_KEY:-std_dev_bootstrap_key_change_me}
       WEBHOOK_URL: ${WEBHOOK_URL:-}

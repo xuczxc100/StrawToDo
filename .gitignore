@@ -19,3 +19,4 @@ data/
 *.sqlite
 .turbo/
 .vite/
+.playwright-cli/
