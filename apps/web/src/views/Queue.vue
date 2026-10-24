@@ -6,7 +6,7 @@
         執行下一張
       </button>
     </div>
-    <p class="muted">只會派 Todo。全站同時最多一個 Agent Run。</p>
+    <p class="muted" data-testid="inbox-hint">Telegram Cursor 用 API 填 Todo 並執行，不必在這裡改欄位。全站同時最多一個 Agent Run。</p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="!todos.length" class="muted" data-testid="queue-empty">佇列是空的</p>
     <TransitionGroup v-else name="row" tag="ul" class="issue-list" data-testid="queue-list">

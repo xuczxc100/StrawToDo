@@ -7,6 +7,7 @@ import {
   CreateProjectSchema,
   CreateRunSchema,
   ReorderIssuesSchema,
+  TelegramInboxSchema,
   UpdateIssueSchema,
 } from "@strawtodo/shared";
 import {
@@ -39,6 +40,14 @@ import {
   startQueue,
   startRun,
 } from "./domain/runs.js";
+import {
+  ingestTelegramTodos,
+  normalizeInboxItems,
+  telegramQueue,
+  telegramRun,
+  telegramShow,
+  telegramStartNext,
+} from "./domain/telegram.js";
 import { generateApiKey, hashApiKey } from "./db/migrate.js";
 import { getPool } from "./db/pool.js";
 import { appVersion } from "./version.js";
@@ -254,6 +263,52 @@ a{color:#5b8def} pre{background:#171b24;padding:1rem;border-radius:8px;overflow:
   v1.post("/queue/start", async (c) => {
     const run = await startQueue(c.get("auth"));
     return c.json(run, 201);
+  });
+
+  v1.post("/telegram/todos", async (c) => {
+    const idem = c.req.header("idempotency-key");
+    const bodyText = await c.req.text();
+    const path = "/v1/telegram/todos";
+    if (idem) {
+      try {
+        const cached = await lookupIdempotency(idem, "POST", path, bodyText);
+        if (cached) return c.json(cached.body as object, cached.status as 201);
+      } catch (e) {
+        throw new AppError("idempotency_conflict", (e as Error).message, 409);
+      }
+    }
+    let raw: unknown;
+    try {
+      raw = JSON.parse(bodyText || "{}");
+    } catch {
+      throw new AppError("validation_error", "Invalid JSON", 400);
+    }
+    const parsed = TelegramInboxSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new AppError("validation_error", "Invalid telegram todo", 400, parsed.error.flatten());
+    }
+    const result = await ingestTelegramTodos(c.get("auth"), normalizeInboxItems(parsed.data));
+    if (idem) {
+      await storeIdempotency(idem, "POST", path, bodyText, 201, result);
+    }
+    return c.json(result, 201);
+  });
+
+  v1.get("/telegram/queue", async (c) => {
+    return c.json(await telegramQueue(c.get("auth")));
+  });
+
+  v1.get("/telegram/todos/:id", async (c) => {
+    return c.json(await telegramShow(c.get("auth"), c.req.param("id")));
+  });
+
+  v1.post("/telegram/todos/:id/run", async (c) => {
+    const raw = (await c.req.json().catch(() => ({}))) as { model?: string };
+    return c.json(await telegramRun(c.get("auth"), c.req.param("id"), raw.model), 201);
+  });
+
+  v1.post("/telegram/queue/start", async (c) => {
+    return c.json(await telegramStartNext(c.get("auth")), 201);
   });
 
   v1.get("/search", async (c) => {

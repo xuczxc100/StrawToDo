@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Telegram Cursor inbox CLI：只建 Todo / 執行 / 查狀態，不編輯。
+set -euo pipefail
+SCRIPT="$(readlink -f "$0")"
+ROOT="$(cd "$(dirname "$SCRIPT")/.." && pwd)"
+BASE="${STRAWTODO_API_BASE:-http://127.0.0.1:3040}"
+KEY="${STRAWTODO_API_KEY:-}"
+
+if [[ -z "$KEY" && -f "$ROOT/deploy/.env" ]]; then
+  KEY="$(python3 - <<'PY' "$ROOT/deploy/.env"
+import sys
+from pathlib import Path
+for line in Path(sys.argv[1]).read_text().splitlines():
+    if line.startswith("BOOTSTRAP_API_KEY="):
+        print(line.split("=", 1)[1].strip().strip('"').strip("'"), end="")
+        break
+PY
+)"
+fi
+if [[ -z "$KEY" ]]; then
+  echo "缺少 STRAWTODO_API_KEY（或 $ROOT/deploy/.env 的 BOOTSTRAP_API_KEY）" >&2
+  exit 1
+fi
+
+api() {
+  local method="$1" path="$2" body="${3:-}"
+  local args=(-sS -X "$method" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json")
+  if [[ -n "$body" ]]; then
+    args+=(-d "$body")
+  fi
+  curl "${args[@]}" "$BASE$path"
+  echo
+}
+
+usage() {
+  cat <<'EOF'
+strawtodo — Telegram Inbox（建單＋執行，不編輯）
+
+  strawtodo add "標題" [-d 說明] [--run]
+  strawtodo queue
+  strawtodo show STD-12
+  strawtodo run STD-12
+  strawtodo start
+
+環境：STRAWTODO_API_BASE（預設 http://127.0.0.1:3040）
+     STRAWTODO_API_KEY 或 deploy/.env 的 BOOTSTRAP_API_KEY
+EOF
+}
+
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+  add)
+    title="${1:-}"
+    [[ -n "$title" ]] || { usage; exit 1; }
+    shift || true
+    desc=""
+    run="false"
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        -d|--desc|--description) desc="${2:-}"; shift 2 ;;
+        --run) run="true"; shift ;;
+        *) echo "未知參數 $1" >&2; exit 1 ;;
+      esac
+    done
+    body="$(python3 -c 'import json,sys; print(json.dumps({"title":sys.argv[1],"description":sys.argv[2],"run":sys.argv[3]=="true","source_ref":"cli"}))' "$title" "$desc" "$run")"
+    api POST /v1/telegram/todos "$body"
+    ;;
+  queue) api GET /v1/telegram/queue ;;
+  show)
+    [[ -n "${1:-}" ]] || { usage; exit 1; }
+    api GET "/v1/telegram/todos/$1"
+    ;;
+  run)
+    [[ -n "${1:-}" ]] || { usage; exit 1; }
+    api POST "/v1/telegram/todos/$1/run" '{}'
+    ;;
+  start) api POST /v1/telegram/queue/start '{}' ;;
+  -h|--help|help|"") usage ;;
+  *) echo "未知指令 $cmd" >&2; usage; exit 1 ;;
+esac

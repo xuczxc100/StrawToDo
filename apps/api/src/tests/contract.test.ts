@@ -49,6 +49,8 @@ test("openapi export shape", async () => {
   assert.equal(res.status, 200);
   assert.equal((json as { openapi: string }).openapi, "3.0.3");
   assert.ok((json as { paths: object }).paths["/issues"]);
+  assert.ok((json as { paths: object }).paths["/telegram/todos"]);
+  assert.ok((json as { paths: object }).paths["/telegram/queue"]);
 });
 
 test("create + get + update issue", async () => {

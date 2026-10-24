@@ -135,6 +135,75 @@ server.tool(
   },
 );
 
+server.tool(
+  "inbox_add",
+  "Telegram Inbox：建 Todo（可 run:true 立刻派工）。不要用這個改既有單。",
+  {
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    run: z.boolean().optional(),
+    source_ref: z.string().optional(),
+    items: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          run: z.boolean().optional(),
+        }),
+      )
+      .optional(),
+  },
+  async (args) => {
+    if (!args.items?.length && !args.title) {
+      throw new Error("inbox_add 需要 title 或 items");
+    }
+    const body = args.items?.length
+      ? { items: args.items }
+      : {
+          title: args.title,
+          description: args.description ?? "",
+          run: Boolean(args.run),
+          source_ref: args.source_ref ?? "",
+        };
+    const data = await api(`/v1/telegram/todos`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "inbox_queue",
+  "Telegram Inbox：看 Todo 佇列與現行 Run",
+  {},
+  async () => {
+    const data = await api(`/v1/telegram/queue`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "inbox_show",
+  "Telegram Inbox：唯讀單張狀態／留言／Run",
+  { id: z.string() },
+  async ({ id }) => {
+    const data = await api(`/v1/telegram/todos/${encodeURIComponent(id)}`);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
+server.tool(
+  "inbox_run",
+  "Telegram Inbox：執行指定 Todo 或佇列下一張",
+  { id: z.string().optional() },
+  async ({ id }) => {
+    const path = id ? `/v1/telegram/todos/${encodeURIComponent(id)}/run` : "/v1/telegram/queue/start";
+    const data = await api(path, { method: "POST", body: "{}" });
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  },
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

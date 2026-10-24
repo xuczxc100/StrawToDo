@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-test("mcp source registers six tools", () => {
+test("mcp source registers inbox and issue tools", () => {
   const src = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "index.ts"),
     "utf8",
@@ -16,6 +16,10 @@ test("mcp source registers six tools", () => {
     "update_issue",
     "add_comment",
     "search",
+    "inbox_add",
+    "inbox_queue",
+    "inbox_show",
+    "inbox_run",
   ]) {
     assert.match(src, new RegExp(`"${name}"`));
   }

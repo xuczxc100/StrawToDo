@@ -18,3 +18,9 @@ test("list → create → detail → comment → done", async ({ page }) => {
   await page.getByTestId("status-select").selectOption("done");
   await expect(page.getByTestId("status-select")).toHaveValue("done");
 });
+
+test("queue page mentions telegram inbox", async ({ page }) => {
+  await login(page);
+  await page.goto("/queue");
+  await expect(page.getByTestId("inbox-hint")).toBeVisible();
+});

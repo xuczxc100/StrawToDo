@@ -36,8 +36,26 @@ export const CreateIssueSchema = z.object({
   project_id: z.string().uuid().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   label_ids: z.array(z.string().uuid()).optional().default([]),
+  source: z.string().max(40).optional().default("web"),
+  source_ref: z.string().max(200).optional().default(""),
 });
 export type CreateIssueInput = z.infer<typeof CreateIssueSchema>;
+
+export const TelegramTodoItemSchema = z.object({
+  title: z.string().min(1).max(500),
+  description: z.string().max(100_000).optional().default(""),
+  priority: IssuePrioritySchema.optional().default("high"),
+  issue_type: IssueTypeSchema.optional().default("feature"),
+  run: z.boolean().optional().default(false),
+  source_ref: z.string().max(200).optional().default(""),
+});
+export type TelegramTodoItem = z.infer<typeof TelegramTodoItemSchema>;
+
+export const TelegramInboxSchema = z.union([
+  TelegramTodoItemSchema,
+  z.object({ items: z.array(TelegramTodoItemSchema).min(1).max(20) }),
+]);
+export type TelegramInboxInput = z.infer<typeof TelegramInboxSchema>;
 
 export const UpdateIssueSchema = z
   .object({
@@ -117,5 +135,6 @@ export const GLOSSARY = {
   Cycle: "時間盒規劃單位；v0.2 才實作。",
   Comment: "議題留言；人與 Agent 寫在同一條時間線。",
   Run: "一張 Issue 的一次 Agent 派工；對應 cursor-openai-bridge job。",
+  TelegramInbox: "Telegram Cursor 專用入口：只建 Todo、執行、查狀態，不編輯。",
   ApiKey: "給 agent／自動化的認證憑證。",
 } as const;

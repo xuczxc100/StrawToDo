@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS issues (
   sort_order INT NOT NULL DEFAULT 0,
   assignee_id UUID,
   created_by TEXT NOT NULL DEFAULT 'api_key',
+  source TEXT NOT NULL DEFAULT 'web',
+  source_ref TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (team_id, number),

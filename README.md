@@ -2,7 +2,7 @@
 
 Linear 式任務板：你安排 Issue，每一張由 Cursor Agent 獨立跑完並寫回回應。做完自動進 **In Review**，Agent 不能自己標 Done。
 
-**版本：** 0.2.1.2 · **分支：** `main` only · **授權：** Apache-2.0
+**版本：** 0.2.1.3 · **分支：** `main` only · **授權：** Apache-2.0
 
 公開站：`https://todo.wastebase.xyz`
 
@@ -25,6 +25,18 @@ npm run dev:web   # :3041
 ```
 
 開站會先到登入頁。帳號由 `LOGIN_USER`／`LOGIN_PASSWORD` 在 migrate 時寫入（密碼只存 bcrypt）。Agent／MCP 仍可用 API Key。
+
+主用途是 **Telegram Cursor**：對接使用者、用 Inbox API 填 Todo 並執行，不必在畫面上改單。
+
+```bash
+~/.cursor/scripts/strawtodo add "修 nginx" -d "使用者原話" --run
+curl -sS -H "Authorization: Bearer $STRAWTODO_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"修 nginx","run":true}' \
+  http://127.0.0.1:3040/v1/telegram/todos
+```
+
+文件：`docs/telegram-api.md`。
 
 ## 測試
 

@@ -9,6 +9,7 @@
 | Cycle | 時間盒規劃單位；**v0.2** 才實作。 |
 | Comment | 議題留言；agent 進度回報主要通道。 |
 | ApiKey | 給 agent／自動化的認證憑證（hash 儲存）。 |
+| TelegramInbox | Telegram Cursor 專用入口：只建 Todo、執行、查狀態，不編輯。 |
 | Outbox | transactional webhook 佇列，保證事件不因行程崩潰而遺失。 |
 
 狀態列舉：`backlog` · `todo` · `in_progress` · `in_review` · `done` · `canceled`

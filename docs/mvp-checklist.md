@@ -9,6 +9,13 @@
 - [x] `todo.wastebase.xyz` 公開
 - [x] 版本 a.b.c.d + `scripts/bump-version.sh`
 
+## v0.2.1.3 Telegram Inbox API
+
+- [x] `POST /v1/telegram/todos` 建 Todo（可立刻 run）；busy 時留佇列
+- [x] `GET /v1/telegram/queue`／`todos/:id` 唯讀
+- [x] CLI `strawtodo`；MCP `inbox_*`
+- [x] 沒有 Telegram 編輯端點
+
 ## v0.2.1.2 Vue 動畫
 
 - [x] `router-view` 用 `<Transition name="page" mode="out-in">`

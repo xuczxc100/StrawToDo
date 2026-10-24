@@ -2,9 +2,9 @@ export const openApiDocument = {
   openapi: "3.0.3",
   info: {
     title: "StrawToDo API",
-    version: "0.2.0.1",
+    version: "0.2.1.3",
     description:
-      "Agent-first issue tracker. Authenticate with Authorization: Bearer <API_KEY> or X-Api-Key.",
+      "Telegram Cursor inbox + Linear board. Auth: Authorization: Bearer <API_KEY> or X-Api-Key. Telegram path: POST /telegram/todos (create+run), GET /telegram/queue — no edit.",
   },
   servers: [{ url: "/v1" }],
   components: {
@@ -148,6 +148,33 @@ export const openApiDocument = {
     },
     "/queue/start": {
       post: { summary: "Run the next Todo", responses: { "201": { description: "Created" }, "409": { description: "Busy" } } },
+    },
+    "/telegram/todos": {
+      post: {
+        summary: "Telegram Inbox：建 Todo（可一次多張），run:true 立刻派工。不編輯。",
+        parameters: [{ name: "Idempotency-Key", in: "header", schema: { type: "string" } }],
+        responses: { "201": { description: "Created" }, "409": { description: "Busy run queued as todo" } },
+      },
+    },
+    "/telegram/queue": {
+      get: { summary: "Telegram Inbox：Todo／進行中／待審＋現行 Run", responses: { "200": { description: "OK" } } },
+    },
+    "/telegram/todos/{id}": {
+      get: {
+        summary: "Telegram Inbox：單張狀態＋留言＋Run（唯讀）",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "OK" } },
+      },
+    },
+    "/telegram/todos/{id}/run": {
+      post: {
+        summary: "Telegram Inbox：執行指定 Todo",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "201": { description: "Started" }, "409": { description: "Busy" } },
+      },
+    },
+    "/telegram/queue/start": {
+      post: { summary: "Telegram Inbox：執行佇列下一張", responses: { "201": { description: "Created" }, "409": { description: "Busy" } } },
     },
     "/api-keys": {
       post: {

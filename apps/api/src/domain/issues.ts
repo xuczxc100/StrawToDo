@@ -34,6 +34,8 @@ export type IssueRow = {
   sort_order: number;
   assignee_id: string | null;
   created_by: string;
+  source: string;
+  source_ref: string;
   created_at: Date;
   updated_at: Date;
   label_ids?: string[];
@@ -56,6 +58,8 @@ function mapIssue(row: IssueRow & { label_ids?: string[] | null }) {
     assignee_id: row.assignee_id,
     label_ids: row.label_ids ?? [],
     created_by: row.created_by,
+    source: row.source || "web",
+    source_ref: row.source_ref || "",
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
@@ -248,8 +252,8 @@ export async function createIssue(auth: AuthContext, input: CreateIssueInput) {
       `INSERT INTO issues (
          team_id, project_id, number, identifier, title, description,
          status, priority, issue_type, assignee_type, sort_order,
-         assignee_id, created_by
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         assignee_id, created_by, source, source_ref
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [
         auth.teamId,
@@ -265,6 +269,8 @@ export async function createIssue(auth: AuthContext, input: CreateIssueInput) {
         input.sort_order ?? orderRes.rows[0].n,
         input.assignee_id ?? null,
         auth.createdBy,
+        input.source ?? "web",
+        input.source_ref ?? "",
       ],
     );
     const issue = ins.rows[0];
