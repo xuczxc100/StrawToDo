@@ -1,6 +1,6 @@
 {
   "name": "strawtodo",
-  "version": "0.2.1-1",
+  "version": "0.2.1-2",
   "private": true,
   "description": "Linear-style issue board; each issue gets its own Agent run",
   "license": "Apache-2.0",

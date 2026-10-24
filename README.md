@@ -2,7 +2,7 @@
 
 Linear 式任務板：你安排 Issue，每一張由 Cursor Agent 獨立跑完並寫回回應。做完自動進 **In Review**，Agent 不能自己標 Done。
 
-**版本：** 0.2.0.1 · **分支：** `main` only · **授權：** Apache-2.0
+**版本：** 0.2.1.2 · **分支：** `main` only · **授權：** Apache-2.0
 
 公開站：`https://todo.wastebase.xyz`
 
@@ -32,7 +32,7 @@ npm run dev:web   # :3041
 export DATABASE_URL=postgres://strawtodo:strawtodo@localhost:5433/strawtodo
 export BOOTSTRAP_API_KEY=std_dev_bootstrap_key_change_me
 npm run check
-npx playwright test
+npx playwright test   # 獨立 DB strawtodo_e2e，不碰正式資料
 ```
 
 ## 自架（接真實 Cursor Agent）

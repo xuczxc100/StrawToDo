@@ -23,18 +23,20 @@
           <span>{{ labels[col] }}</span>
           <span>{{ byStatus(col).length }}</span>
         </div>
-        <router-link
-          v-for="i in byStatus(col)"
-          :key="i.id"
-          class="chip"
-          :to="`/issues/${i.identifier}`"
-          draggable="true"
-          :data-testid="`issue-${i.identifier}`"
-          @dragstart="dragging = i.identifier"
-        >
-          <span class="id">{{ i.identifier }}</span>
-          <span><i :class="['pri', i.priority]"></i>{{ i.title }}</span>
-        </router-link>
+        <TransitionGroup name="chip" tag="div" class="col-list">
+          <router-link
+            v-for="i in byStatus(col)"
+            :key="i.id"
+            class="chip"
+            :to="`/issues/${i.identifier}`"
+            draggable="true"
+            :data-testid="`issue-${i.identifier}`"
+            @dragstart="dragging = i.identifier"
+          >
+            <span class="id">{{ i.identifier }}</span>
+            <span><i :class="['pri', i.priority]"></i>{{ i.title }}</span>
+          </router-link>
+        </TransitionGroup>
       </div>
     </div>
   </section>

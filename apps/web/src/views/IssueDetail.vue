@@ -1,4 +1,5 @@
 <template>
+  <div class="issue-page">
   <section v-if="issue">
     <router-link class="back" to="/board">← Board</router-link>
     <div class="row between">
@@ -33,12 +34,12 @@
     </div>
 
     <h2>留言</h2>
-    <ul class="comments" data-testid="comments">
+    <TransitionGroup name="row" tag="ul" class="comments" data-testid="comments">
       <li v-for="c in comments" :key="c.id" :class="c.author_type">
         <div class="meta">{{ c.author_type === "agent" ? "Agent" : "你" }} · {{ c.created_at }}</div>
         <div>{{ c.body }}</div>
       </li>
-    </ul>
+    </TransitionGroup>
     <form class="create" @submit.prevent="addComment">
       <input v-model="commentBody" required placeholder="新增留言" data-testid="comment-input" />
       <button type="submit" data-testid="comment-btn">送出</button>
@@ -46,6 +47,7 @@
   </section>
   <p v-else-if="error" class="error">{{ error }}</p>
   <p v-else class="muted">載入中…</p>
+  </div>
 </template>
 
 <script setup lang="ts">

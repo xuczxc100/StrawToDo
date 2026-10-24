@@ -9,6 +9,13 @@
 - [x] `todo.wastebase.xyz` 公開
 - [x] 版本 a.b.c.d + `scripts/bump-version.sh`
 
+## v0.2.1.2 Vue 動畫
+
+- [x] `router-view` 用 `<Transition name="page" mode="out-in">`
+- [x] Board 卡片 `<TransitionGroup name="chip">`；List／Queue／留言 `name="row"`
+- [x] Login appear + 錯誤 fade；`prefers-reduced-motion`
+- [x] Playwright motion + 390px
+
 ## v0.1 API（仍有效）
 
 - [x] `/v1/health`

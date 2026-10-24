@@ -33,8 +33,10 @@ button, input, select, textarea {
   border-radius: 6px;
   padding: 0.4rem 0.55rem;
 }
-button { cursor: pointer; font-weight: 600; }
+button { cursor: pointer; font-weight: 600; transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.16s ease; }
 button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+button.primary:hover { background: #6b76db; }
+button.primary:active { transform: scale(0.98); }
 button.ghost { background: transparent; }
 .app-shell { display: flex; min-height: 100vh; }
 .side {
@@ -52,6 +54,7 @@ button.ghost { background: transparent; }
   border-radius: 6px;
   color: var(--muted);
   margin-bottom: 0.15rem;
+  transition: background-color 0.16s ease, color 0.16s ease;
 }
 .nav.router-link-active, .nav.on { background: #26263a; color: var(--text); text-decoration: none; }
 .main { flex: 1; min-width: 0; padding: 1rem 1.1rem 2rem; }
@@ -69,7 +72,7 @@ h2 { font-size: 0.95rem; margin: 1.1rem 0 0.45rem; }
 .error { color: var(--hot); }
 .create { display: flex; gap: 0.4rem; margin: 0.6rem 0 1rem; flex-wrap: wrap; }
 .create input { flex: 1; min-width: 140px; }
-.issue-list, .comments { list-style: none; padding: 0; margin: 0; }
+.issue-list, .comments { list-style: none; padding: 0; margin: 0; position: relative; }
 .issue-list li { border-top: 1px solid var(--border); }
 .issue-list a, .issue-row {
   display: grid;
@@ -116,6 +119,7 @@ h2 { font-size: 0.95rem; margin: 1.1rem 0 0.45rem; }
   font-size: 0.7rem; color: var(--muted); font-weight: 700;
   letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.4rem;
 }
+.col-list { min-height: 8px; position: relative; }
 .chip {
   display: block;
   background: var(--surface-2);
@@ -126,8 +130,9 @@ h2 { font-size: 0.95rem; margin: 1.1rem 0 0.45rem; }
   color: var(--text);
   text-decoration: none;
   cursor: grab;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
 }
-.chip:hover { text-decoration: none; border-color: var(--accent); }
+.chip:hover { text-decoration: none; border-color: var(--accent); background: #2c2c32; }
 .chip .id { display: block; margin-bottom: 0.15rem; }
 .pri {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
@@ -188,6 +193,60 @@ h2 { font-size: 0.95rem; margin: 1.1rem 0 0.45rem; }
 .login-card h1 { margin: 0; }
 .login-card label { display: flex; flex-direction: column; gap: 0.25rem; color: var(--muted); font-size: 0.82rem; }
 .login-card button { margin-top: 0.3rem; }
+
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.login-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.login-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.16s ease; }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
+.chip-enter-active,
+.chip-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.chip-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.chip-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.chip-leave-active { position: absolute; width: calc(100% - 0.9rem); }
+.chip-move { transition: transform 0.18s ease; }
+.row-enter-active,
+.row-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.row-enter-from,
+.row-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.row-move { transition: transform 0.18s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 
 @media (max-width: 720px) {
   .app-shell { display: block; }

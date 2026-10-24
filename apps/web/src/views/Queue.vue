@@ -9,7 +9,7 @@
     <p class="muted">只會派 Todo。全站同時最多一個 Agent Run。</p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="!todos.length" class="muted" data-testid="queue-empty">佇列是空的</p>
-    <ul v-else class="issue-list" data-testid="queue-list">
+    <TransitionGroup v-else name="row" tag="ul" class="issue-list" data-testid="queue-list">
       <li v-for="(i, idx) in todos" :key="i.id">
         <router-link :to="`/issues/${i.identifier}`" :data-testid="`issue-${i.identifier}`">
           <span class="id">{{ idx + 1 }}. {{ i.identifier }}</span>
@@ -18,7 +18,7 @@
           <span class="faint">{{ i.priority }}</span>
         </router-link>
       </li>
-    </ul>
+    </TransitionGroup>
   </section>
 </template>
 

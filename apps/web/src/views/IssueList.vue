@@ -26,7 +26,7 @@
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="loading" class="muted">載入中…</p>
     <p v-else-if="!issues.length" class="muted" data-testid="empty">尚無議題</p>
-    <ul v-else class="issue-list" data-testid="issue-list">
+    <TransitionGroup v-else name="row" tag="ul" class="issue-list" data-testid="issue-list">
       <li v-for="i in issues" :key="i.id">
         <router-link :to="`/issues/${i.identifier}`" :data-testid="`issue-${i.identifier}`">
           <span class="id">{{ i.identifier }}</span>
@@ -35,7 +35,7 @@
           <span class="faint">{{ i.priority }}</span>
         </router-link>
       </li>
-    </ul>
+    </TransitionGroup>
   </section>
 </template>
 

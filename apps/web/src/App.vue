@@ -1,6 +1,10 @@
 <template>
   <div v-if="isLogin" class="login-only">
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <Transition name="page" mode="out-in">
+        <component :is="Component" />
+      </Transition>
+    </router-view>
   </div>
   <div v-else class="app-shell">
     <aside class="side">
@@ -15,7 +19,11 @@
         <span class="muted">{{ username }}</span>
         <button class="ghost" type="button" data-testid="logout-btn" @click="doLogout">登出</button>
       </div>
-      <router-view />
+      <router-view v-slot="{ Component, route: r }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" :key="r.fullPath" />
+        </Transition>
+      </router-view>
     </div>
   </div>
 </template>
